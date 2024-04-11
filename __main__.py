@@ -15,7 +15,10 @@ if __name__ == '__main__':
 
     for category in categories:
         categories_urls = scraper.__get_pages_urls__(category)
-        print(categories_urls)
+        
+        for category_url in categories_urls:
+            page_index = categories_urls.index(category_url) + 1
+            products = scraper.__get_products__(category_url, page_index)
 
 # import requests
 # from libs.web_scraping import WebScraping
