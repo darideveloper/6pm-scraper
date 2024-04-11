@@ -63,12 +63,14 @@ class Scraper():
         
         return urls
         
-    def __get_products__(self, category_page_url: str, page_num: int) -> list:
+    def __get_products__(self, category_page_url: str, page_num: int,
+                         max_pages: int) -> list:
         """ Get products data from current page and return data
 
         Args:
             category_url (str): URL of the category
             page_num (int): Page number
+            max_pages (int): Max pages number
 
         Returns:
             list: List of products
@@ -76,23 +78,26 @@ class Scraper():
             Example:
             [
                 {
-                    'name_model': 'Name Model',
+                    'name': 'Name',
+                    'model': 'Model',
                     'brand': 'Brand',
                     'price': 'Price',
-                    'link': 'Link',
+                    'url': 'url',
                 }
                 ...
             ]
         """
         
-        print(f'\tGetting products from page {page_num}')
+        print(f'\tGetting products from page {page_num} / {max_pages}')
         
         selectors = {
             'product': 'article[data-low-stock]',
-            'name_model': 'dd[itemprop="name"]',
-            'brand': 'dd[itemprop="brand"]',
-            'price': '[itemprop="price"]',
-            'link': 'a',
+            'texts': {
+                'name': 'dd[itemprop="brand"]',
+                'model': 'dd[itemprop="name"]',
+                'price': '[itemprop="price"]',
+            },
+            'url': 'a',
         }
         
         # Get page data
@@ -104,18 +109,12 @@ class Scraper():
             product_data = {}
                         
             # Get product detail
-            name_model = product_elem.select(selectors['name_model'])[0].text
-            name, model = name_model.split(' - ')
-            brand = product_elem.select(selectors['brand'])[0].text
-            price = product_elem.select(selectors['price'])[0].text
-            product_data['name'] = name
-            product_data['model'] = model
-            product_data['brand'] = brand
-            product_data['price'] = price
+            for selector_name, selector in selectors['texts'].items():
+                product_data[selector_name] = product_elem.select(selector)[0].text
             
-            # Get product link
-            link = product_elem.select(selectors['link'])[0]['href']
-            product_data['link'] = self.home + link
+            # Get product url
+            url = product_elem.select(selectors['url'])[0]['href']
+            product_data['url'] = self.home + url
             products_data.append(product_data)
             
         return products_data

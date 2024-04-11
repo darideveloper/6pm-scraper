@@ -14,12 +14,18 @@ if __name__ == '__main__':
         categories = f.readlines()
 
     for category in categories:
-        categories_urls = scraper.__get_pages_urls__(category)
+        categories_pages = scraper.__get_pages_urls__(category)
         
-        for category_url in categories_urls:
-            page_index = categories_urls.index(category_url) + 1
-            products = scraper.__get_products__(category_url, page_index)
-
+        max_pages = len(categories_pages)
+        for category_page in categories_pages:
+            page_index = categories_pages.index(category_page) + 1
+            products = scraper.__get_products__(category_page, page_index, max_pages)
+            continue
+            
+            for product in products:
+                product_url = product['link']
+                product_details = scraper.__get_product_details__(product_url)
+            
 # import requests
 # from libs.web_scraping import WebScraping
 
