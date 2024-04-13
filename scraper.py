@@ -8,6 +8,7 @@ from libs.web_scraping import WebScraping
 load_dotenv()
 USER_AGENT = os.getenv('USER_AGENT')
 DEBUG = os.getenv('DEBUG') == 'True'
+SHOW_CHROME = os.getenv('SHOW_CHROME') == 'True'
 
 
 class Scraper(WebScraping):
@@ -18,7 +19,9 @@ class Scraper(WebScraping):
         self.home = 'https://www.6pm.com'
         
         # Init chrome
-        super().__init__()
+        super().__init__(
+            headless=not SHOW_CHROME,
+        )
     
     def __request_page__(self, url: str) -> BeautifulSoup:
         """ Request page and return BeautifulSoup object
@@ -85,14 +88,14 @@ class Scraper(WebScraping):
         Returns:
             list: List of products
             
-            Example:
+            Structure
             [
                 {
-                    'name': 'Name',
-                    'model': 'Model',
-                    'brand': 'Brand',
-                    'price': 'Price',
-                    'url': 'url',
+                    'name': str,
+                    'model': str,
+                    'brand': str,
+                    'price': str,
+                    'url': str,
                 }
                 ...
             ]
@@ -129,7 +132,7 @@ class Scraper(WebScraping):
             
         return products_data
     
-    def __get_product_details__(self, product_url: str, product_data: dict) -> dict:
+    def __get_product_details__(self, product_url: str, product_data: dict) -> list:
         """ Get product detail from specific product in the page
 
         Args:
@@ -139,15 +142,26 @@ class Scraper(WebScraping):
         Returns:
             dict: Product detail
             
-            Example:
+            Structure
             [
-                TODO
+                {
+                    'name': str
+                    'model': str,
+                    'price': str,
+                    'url': str,
+                    'sku': str,
+                    'images': list[str]
+                    'color': str,
+                    'size': str,
+                    'stock': int
+                }
+                ...
             ]
         """
         
         selectors = {
             'sku': '[itemprop="sku"]',
-            'colors': 'form > div:first-child div:nth-child(index) label',
+            'color': 'form > div:first-child div label:nth-child(index)',
             'size_wrapper': '#sizingChooser + div > div:nth-child(index)',
             'size': '#sizingChooser + div > div:nth-child(index) label',
             'stock': '[name="colorId"] + div',
@@ -169,7 +183,7 @@ class Scraper(WebScraping):
         product_data['images'] = imgs
         
         # Extract each color and size combination
-        selector_colors_base = selectors['colors'].replace(
+        selector_color_base = selectors['color'].replace(
             ':nth-child(index)',
             ''
         )
@@ -177,10 +191,18 @@ class Scraper(WebScraping):
             ':nth-child(index)',
             ''
         )
-        colors_num = len(self.get_elems(selector_colors_base))
+        color_num = len(self.get_elems(selector_color_base))
         sizes_num = len(self.get_elems(selector_sizes_base))
-        for color_index in range(1, colors_num + 1):
+        for color_index in range(1, color_num + 1):
             for size_index in range(1, sizes_num + 1):
+                
+                # Select color
+                selector_color = selectors["color"].replace(
+                    'index',
+                    str(color_index * 2)
+                )
+                self.click_js(selector_color)
+                self.refresh_selenium()
                 
                 # Skip if size is not available
                 selector_size_wrapper = selectors["size_wrapper"].replace(
@@ -191,16 +213,10 @@ class Scraper(WebScraping):
                 if len(size_wrapper_classes.split(' ')) == 2:
                     continue
                 
-                # Select color and size
-                selector_color = selectors["colors"].replace(
-                    'index',
-                    str(color_index * 2)
-                )
                 selector_size = selectors["size"].replace(
                     'index',
                     str(size_index)
                 )
-                self.click_js(selector_color)
                 self.click_js(selector_size)
                 self.refresh_selenium()
                 
@@ -211,6 +227,10 @@ class Scraper(WebScraping):
                 stock = self.get_text(selectors['stock'])
                 if stock == 'ADD TO SHOPPING BAG':
                     stock = 10
+                elif stock == 'OUT OF STOCK':
+                    stock = 0
+                else:
+                    stock = int(stock.split(' ')[1])
                 product_data['stock'] = stock
                 products_data.append(product_data.copy())
                 
