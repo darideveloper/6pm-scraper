@@ -3,17 +3,22 @@ import requests
 from time import sleep
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
+from libs.web_scraping import WebScraping
 
 load_dotenv()
 USER_AGENT = os.getenv('USER_AGENT')
+DEBUG = os.getenv('DEBUG') == 'True'
 
 
-class Scraper():
+class Scraper(WebScraping):
     """ Scrape products from page 6pm.com """
     
     def __init__(self):
         
         self.home = 'https://www.6pm.com'
+        
+        # Init chrome
+        super().__init__()
     
     def __request_page__(self, url: str) -> BeautifulSoup:
         """ Request page and return BeautifulSoup object
@@ -29,6 +34,11 @@ class Scraper():
         sleep(3)
         res = requests.get(url, headers={'User-Agent': USER_AGENT})
         soup = BeautifulSoup(res.text, 'html.parser')
+        
+        # Save page
+        if DEBUG:
+            with open('page.html', 'w') as f:
+                f.write(soup.prettify())
         
         return soup
     
@@ -47,7 +57,7 @@ class Scraper():
         print(f'Getting pages from category {category_url_small}')
         
         selectors = {
-            'last_page': '.Am-z > a:last-child',
+            'last_page': '#searchPagination a:last-child',
         }
         
         # Get total pages number
@@ -119,11 +129,12 @@ class Scraper():
             
         return products_data
     
-    def __get_product_detail__(self, product_url: str) -> dict:
+    def __get_product_details__(self, product_url: str, product_data: dict) -> dict:
         """ Get product detail from specific product in the page
 
         Args:
             product_url (str): URL of the product
+            product_data (dict): Current product data
 
         Returns:
             dict: Product detail
@@ -133,4 +144,74 @@ class Scraper():
                 TODO
             ]
         """
-        pass
+        
+        selectors = {
+            'sku': '[itemprop="sku"]',
+            'colors': 'form > div:first-child div:nth-child(index) label',
+            'size_wrapper': '#sizingChooser + div > div:nth-child(index)',
+            'size': '#sizingChooser + div > div:nth-child(index) label',
+            'stock': '[name="colorId"] + div',
+            'images': '[style="--grid-columns:2"] img',
+        }
+        
+        products_data = []
+        
+        self.set_page(product_url)
+        for _ in range(4):
+            self.go_down()
+            sleep(1)
+        self.refresh_selenium()
+        
+        # Get sku and images
+        sku = self.get_text(selectors['sku'])
+        imgs = self.get_attribs(selectors['images'], 'srcset')
+        product_data['sku'] = sku
+        product_data['images'] = imgs
+        
+        # Extract each color and size combination
+        selector_colors_base = selectors['colors'].replace(
+            ':nth-child(index)',
+            ''
+        )
+        selector_sizes_base = selectors['size'].replace(
+            ':nth-child(index)',
+            ''
+        )
+        colors_num = len(self.get_elems(selector_colors_base))
+        sizes_num = len(self.get_elems(selector_sizes_base))
+        for color_index in range(1, colors_num + 1):
+            for size_index in range(1, sizes_num + 1):
+                
+                # Skip if size is not available
+                selector_size_wrapper = selectors["size_wrapper"].replace(
+                    'index',
+                    str(size_index)
+                )
+                size_wrapper_classes = self.get_attrib(selector_size_wrapper, 'class')
+                if len(size_wrapper_classes.split(' ')) == 2:
+                    continue
+                
+                # Select color and size
+                selector_color = selectors["colors"].replace(
+                    'index',
+                    str(color_index * 2)
+                )
+                selector_size = selectors["size"].replace(
+                    'index',
+                    str(size_index)
+                )
+                self.click_js(selector_color)
+                self.click_js(selector_size)
+                self.refresh_selenium()
+                
+                # Get color and size
+                product_data['color'] = self.get_text(selector_color)
+                product_data['size'] = self.get_text(selector_size)
+                
+                stock = self.get_text(selectors['stock'])
+                if stock == 'ADD TO SHOPPING BAG':
+                    stock = 10
+                product_data['stock'] = stock
+                products_data.append(product_data.copy())
+                
+        return products_data
