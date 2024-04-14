@@ -93,7 +93,6 @@ class Scraper(WebScraping):
                 {
                     'name': str,
                     'model': str,
-                    'brand': str,
                     'price': str,
                     'url': str,
                 }
