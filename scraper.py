@@ -65,9 +65,13 @@ class Scraper(WebScraping):
         
         # Get total pages number
         soup = self.__request_page__(category_url)
-        last_page = soup.select(selectors['last_page'])[0].text
-        last_page_int = int(last_page)
-        
+        try:
+            last_page = soup.select(selectors['last_page'])[0].text
+        except IndexError:
+            last_page_int = 1
+        else:
+            last_page_int = int(last_page)
+            
         # Generate pages URL
         urls = []
         for page_index in range(last_page_int):
