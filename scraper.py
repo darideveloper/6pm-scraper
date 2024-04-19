@@ -183,6 +183,7 @@ class Scraper(WebScraping):
         sku = self.get_text(selectors['sku'])
         imgs = self.get_attribs(selectors['images'], 'srcset')
         imgs = list(map(lambda img: img.split("%20")[0], imgs))
+        imgs = list(map(lambda img: img.split(" ")[0], imgs))
         product_data['sku'] = sku
         product_data['images'] = imgs
         
