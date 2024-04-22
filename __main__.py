@@ -48,7 +48,18 @@ if __name__ == '__main__':
                 for product_detail in products_details:
                     images = product_detail['images']
                     del product_detail['images']
-                    excel_data.append(list(product_detail.values()) + images)
+                    product_detail_values = [
+                        product_detail['name'],
+                        product_detail['model'],
+                        product_detail['price'],
+                        product_detail['url'],
+                        product_detail['sku'],
+                        product_detail['color'],
+                        product_detail['size'],
+                        product_detail['stock'],
+                    ]
+                    product_detail_values += images
+                    excel_data.append(product_detail_values)
                 sheets.write_data(excel_data, last_row + 1)
                 sheets.save()
                 

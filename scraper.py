@@ -97,7 +97,6 @@ class Scraper(WebScraping):
                 {
                     'name': str,
                     'model': str,
-                    'price': str,
                     'url': str,
                 }
                 ...
@@ -111,7 +110,6 @@ class Scraper(WebScraping):
             'texts': {
                 'name': 'dd[itemprop="brand"]',
                 'model': 'dd[itemprop="name"]',
-                'price': '[itemprop="price"]',
             },
             'url': 'a',
         }
@@ -163,6 +161,7 @@ class Scraper(WebScraping):
         """
         
         selectors = {
+            'price': '[itemprop="price"]',
             'sku': '[itemprop="sku"]',
             'color': 'form > div:first-child div label:nth-child(index)',
             'size_wrapper': '#sizingChooser + div > div:nth-child(index)',
@@ -229,6 +228,7 @@ class Scraper(WebScraping):
                 product_data['color'] = self.get_text(selector_color)
                 product_data['size'] = self.get_text(selector_size)
                 
+                # Get stock
                 stock = self.get_text(selectors['stock'])
                 if stock == 'ADD TO SHOPPING BAG':
                     stock = 10
@@ -237,6 +237,11 @@ class Scraper(WebScraping):
                 else:
                     stock = int(stock.split(' ')[1])
                 product_data['stock'] = stock
+                
+                # Get price
+                price = self.get_attrib(selectors['price'], 'content')
+                product_data['price'] = price
+                
                 products_data.append(product_data.copy())
                 
         return products_data
