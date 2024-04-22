@@ -15,9 +15,17 @@ if __name__ == '__main__':
     with open(categories_path, 'r') as f:
         categories = f.readlines()
         
-    # Detect last row from excel
     sheets = SpreadsheetManager('products.xlsx')
+    sheets.clean_workbook()
     sheets.create_set_sheet('products')
+    
+    # Delete content and write headers
+    sheets.write_data([
+        ["name", "model", "price", "url", "sku", "color", "size", "stock", "imgs"],
+    ])
+    sheets.save()
+    
+    # Detect last row from excel
     old_data = sheets.get_data()
     old_data = list(filter(lambda row: row[0], old_data))
     last_row = len(old_data)
